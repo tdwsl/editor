@@ -18,6 +18,8 @@
 char *text, *filename = 0;
 int cx = 0, cy = 0;
 int yscroll = 0, xscroll = 0;
+enum { M_INSERT, M_CTRLK };
+int mode = M_INSERT;
 
 void freeText() {
     free(text);
@@ -128,6 +130,12 @@ void loadFile(const char *filename) {
         }
 }
 
+void saveFile(const char *filename) {
+    FILE *fp = fopen(filename, "w");
+    fprintf(fp, "%s", text);
+    fclose(fp);
+}
+
 void findNext(char c) {
     int p = getCursorPos();
     for(p++; text[p] && text[p] != c; p++);
@@ -179,6 +187,15 @@ void draw() {
     if(!name)
         name = nofileMsg;
     mvaddstr(0, 1+strlen(editingMsg), name);
+    x = 1+strlen(editingMsg)+strlen(name)+1;
+    switch(mode) {
+    case M_INSERT:
+        mvaddstr(0, x, "I");
+        break;
+    case M_CTRLK:
+        mvaddstr(0, x, "^K");
+        break;
+    }
     attrset(A_NORMAL);
     move(cy+yo-yscroll, cx+xo-xscroll);
     refresh();
@@ -186,6 +203,23 @@ void draw() {
 
 void input() {
     wchar_t c = getch();
+    if(mode == M_CTRLK) {
+        switch(c) {
+        case 's':
+            saveFile(filename);
+            break;
+        case 'q':
+            free(text);
+            endCurses();
+            exit(0);
+            break;
+        default:
+            break;
+        }
+        mode = M_INSERT;
+        return;
+    }
+    
     int p, w, h;
     getmaxyx(stdscr, h, w);
     switch(c) {
@@ -253,6 +287,9 @@ void input() {
         if(cy < 0)
             cy = 0;
         getCursorPos();
+        break;
+    case 0x0b:
+        mode = M_CTRLK;
         break;
     default:
         if((c < 0x20 && c != '\n') || c == 0x7f || c >= 0xff)
