@@ -60,15 +60,32 @@ void setCursorPos(int p) {
 }
 
 void insertChar(char c) {
+    /* insert character */
     int p = getCursorPos();
     int l = strlen(text);
     for(int i = l; i > p; i--)
         text[i] = text[i-1];
     text[p] = c;
     cx++;
+    
+    /* handle newline */
     if(c == '\n') {
         cx = 0;
         cy++;
+        l++;
+        p++;
+        /* calculate indentation */
+        int indent = 0;
+        int i;
+        for(i = p-2; i > 0 && text[i] != '\n'; i--);
+        for(i++; text[i] == ' '; i++)
+            indent++;
+        /* apply indentation */
+        for(int i = l+indent; i >= p+indent; i--)
+            text[i] = text[i-indent];
+        for(int i = p; i < p+indent; i++)
+            text[i] = ' ';
+        cx = indent;
     }
 }
 
@@ -109,6 +126,18 @@ void loadFile(const char *filename) {
             deleteChar();
             insertTab();
         }
+}
+
+void findNext(char c) {
+    int p = getCursorPos();
+    for(p++; text[p] && text[p] != c; p++);
+    setCursorPos(p);
+}
+
+void findPrev(char c) {
+    int p = getCursorPos();
+    for(p--; text[p] && text[p-1] != c; p--);
+    setCursorPos(p);
 }
 
 void initCurses() {
@@ -157,7 +186,8 @@ void draw() {
 
 void input() {
     wchar_t c = getch();
-    int p;
+    int p, w, h;
+    getmaxyx(stdscr, h, w);
     switch(c) {
     case KEY_UP:
         if(cy > 0)
@@ -179,7 +209,7 @@ void input() {
         break;
     case KEY_RIGHT:
         p = getCursorPos();
-        if(text[p+1] != '\n') {
+        if(text[p] != '\n') {
             if(text[p] != 0)
                 cx++;
         }
@@ -204,6 +234,26 @@ void input() {
     case 0x09:
         insertTab();
         break;
+    case KEY_END:
+        p = getCursorPos();
+        if(text[p] != '\n')
+            findNext('\n');
+        break;
+    case KEY_HOME:
+        p = getCursorPos();
+        if(text[p-1] != '\n')
+            findPrev('\n');
+        break;
+    case 0x0152:
+        cy += h;
+        getCursorPos();
+        break;
+    case 0x0153:
+        cy -= h;
+        if(cy < 0)
+            cy = 0;
+        getCursorPos();
+        break;
     default:
         if((c < 0x20 && c != '\n') || c == 0x7f || c >= 0xff)
             break;
@@ -216,20 +266,21 @@ void input() {
         for(int i = strlen(text); i < strlen(text)+20; i++)
             text[i] = 0;
     }
-    int w, h;
-    getmaxyx(stdscr, h, w);
-    if(cy-yscroll > h-10)
-        yscroll += 1;
-    if(cy-yscroll < 10)
-        yscroll -= 1;
-    if(yscroll < 0)
-        yscroll = 0;
+    
+    
     if(cx-xscroll > w-6)
-        xscroll += 1;
-    if(cx-xscroll < 7)
-        xscroll -= 1;
+        xscroll = -w+6+cx;
+    if(cx-xscroll < 10)
+        xscroll = -10+cx;
     if(xscroll < 0)
         xscroll = 0;
+    
+    if(cy-yscroll > h-3)
+        yscroll = -h+3+cy;
+    if(cy-yscroll < 3)
+        yscroll = -3+cy;
+    if(yscroll < 0)
+        yscroll = 0;
 }
 
 int main(int argc, char **args) {
