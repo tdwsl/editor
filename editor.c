@@ -90,6 +90,7 @@ void deleteChar() {
 }
 
 void loadFile(const char *filename) {
+    /* Load the file */
     FILE *fp = fopen(filename, "r");
     if(!fp)
         return;
@@ -100,6 +101,14 @@ void loadFile(const char *filename) {
         sprintf(text, "%s%s", text, buf);
     }
     fclose(fp);
+    
+    /* Fix tabs */
+    for(int i = 0; text[i]; i++)
+        if(text[i] == '\t') {
+            setCursorPos(i);
+            deleteChar();
+            insertTab();
+        }
 }
 
 void initCurses() {
