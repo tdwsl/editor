@@ -1,0 +1,1 @@
+gcc editor.c -o e -lncurses
