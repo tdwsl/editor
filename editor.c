@@ -73,9 +73,14 @@ void insertChar(char c) {
 }
 
 void insertTab() {
-    int w = (cx>>2)<<2+4-cx;
-    for(int i = 0; i < w; i++)
-        insertChar(' ');
+    int w = 4 - cx%4;
+    int l = strlen(text);
+    int p = getCursorPos();
+    for(int i = l+w; i >= p+w; i--)
+        text[i] = text[i-w];
+    for(int i = p; i < p+w; i++)
+        text[i] = ' ';
+    cx += w;
 }
     
 void deleteChar() {
@@ -191,6 +196,8 @@ void input() {
         insertTab();
         break;
     default:
+        if((c < 0x20 && c != '\n') || c == 0x7f || c >= 0xff)
+            break;
         insertChar((char)c);
         break;
     }
