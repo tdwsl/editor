@@ -243,6 +243,14 @@ void draw() {
     int comment=0, quote=0;
     for(int i = 0; text[i] && y+yo-yscroll < h; i++) {
         char c = text[i];
+        
+        attrset(A_NORMAL);
+        
+        /* check whether character might be part of a keyword */
+        if((c>0x40&&c<0x5b)||(c>0x60&&c<0x7b)||c=='#'||c=='_') {
+            ws++;
+            continue;
+        }
 
         /* handle C-style comments */
         if(c == '/' && comment == 1 && !quote)
@@ -258,31 +266,15 @@ void draw() {
             if(text[i+1] == '/')
                 comment = 2;
         
-        /* handle single quotes */
-        if(text[i-1] == '\'' && quote == 1 && !comment)
-            if(text[i-2] != '\\' || text[i-3] == '\\')
-                quote = 0;
-        if(c == '\'' && !quote && !comment)
-            quote = 1;
-        
-        /* handle double quotes */
-        if(text[i-1] == '"' && quote == 2 && !comment)
-            if(text[i-2] != '\\' || text[i-3] == '\\')
-                quote = 0;
-        if(c == '"' && !quote && !comment)
-            quote = 2;
-            
-        /* check whether character might be part of a keyword */
-        if((c>0x40&&c<0x5b)||(c>0x60&&c<0x7b)||c=='#'||c=='_') {
-            ws++;
-            continue;
-        }
-        
         if(comment) {
-            attrset(COLOR_PAIR(5));
+            attron(COLOR_PAIR(5));
             if(comment == -1)
                 comment = 0;
         }
+        
+        /* handle single quotes */
+        
+        /* handle double quotes */
         
         if(quote)
             attron(COLOR_PAIR(2));
@@ -299,19 +291,17 @@ void draw() {
             x += strlen(word);
             free(word);
         }
-        
-        ws = 0;
         mvaddch(y+yo-yscroll, x+xo-xscroll, c);
+        ws = 0;
         x++;
         if(c == '\n') {
             x = 0;
             y++;
         }
-        
-        attrset(A_NORMAL);
     }
     
     /* top bar */
+    attrset(A_NORMAL);
     attron(A_STANDOUT);
     for(int x = 0; x < w; x++)
         mvaddch(0, x, ' ');
@@ -445,6 +435,9 @@ void input() {
         break;
     case 0x19: // CTRL+Y
         deleteLine();
+        break;
+    case 0x014a: // delete
+        deleteChar();
         break;
     default: // character to be typed
         if((c < 0x20 && c != '\n') || c == 0x7f || c >= 0xff)
